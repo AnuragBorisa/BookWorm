@@ -6,16 +6,63 @@
 //
 
 import SwiftUI
+import SwiftData
+
+
 
 struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+    @Environment(\.modelContext) var modelContext
+    @Query(sort:[SortDescriptor(\Book.title),SortDescriptor(\Book.author)]) var books: [Book]
+    
+    @State private var showingAddScreen = false
+    
+    func deleteBooks(at offsets:IndexSet){
+        for offset in offsets {
+            let book = books[offset]
+            
+            modelContext.delete(book);
         }
-        .padding()
+    }
+   
+    var body: some View {
+        NavigationStack {
+            
+            List{
+                ForEach(books) {book in
+                    NavigationLink(value:book){
+                        HStack{
+                            EmojiRatingView(rating:book.rating)
+                                .font(.largeTitle)
+                            VStack(alignment: .leading){
+                                Text(book.title)
+                                    .font(.headline)
+                                    .foregroundStyle(book.rating < 2 ? .red : .primary)
+                                Text(book.author)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+                .onDelete(perform: deleteBooks)
+            }   .navigationDestination(for: Book.self) {book in
+                DetailView(book:book)
+            }
+                .navigationTitle("BookWorm")
+                .toolbar{
+                    ToolbarItem(placement: .topBarTrailing){
+                        Button("Add Book",systemImage: "plus"){
+                            showingAddScreen.toggle()
+                        }
+                    }
+                    
+                    ToolbarItem(placement:.topBarLeading){
+                        EditButton()
+                    }
+                }
+                .sheet(isPresented: $showingAddScreen){
+                    AddBookView()
+                }
+        }
     }
 }
 
